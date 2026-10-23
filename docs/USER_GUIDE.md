@@ -21,7 +21,7 @@
 
 ### 使用 Windows 安装包
 
-如果已经取得打包文件，可选择以下一种：
+前往 [v1.0.7 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.7)，在 Assets 中下载以下一种（Source code 是源码压缩包，不是安装包）：
 
 | 文件 | 使用方法 |
 | --- | --- |

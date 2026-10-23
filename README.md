@@ -7,6 +7,15 @@
 
 **使用帮助：[安装、歌单导入、下载、歌词、托盘与常见问题](docs/USER_GUIDE.md)** · 当前版本：**v1.0.7** · [已知问题审查记录](docs/reviews/2026-10-23-code-review.md)
 
+## 下载安装
+
+前往 [v1.0.7 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.7)，在 Assets 中选择：
+
+- [Windows x64 安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.7/GD-Music-1.0.7-Windows-x64-Setup.exe)：双击安装，通过桌面或开始菜单启动。
+- [Windows x64 免安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.7/GD-Music-1.0.7-Windows-x64-Portable.exe)：下载后双击运行。
+
+两个版本均自带运行环境，无需安装 Node.js。发布页附有 `SHA256SUMS.txt`，用于核对下载文件。GitHub 自动生成的 Source code 压缩包是源码，不是安装包。
+
 ![首页](preview.png)
 
 ## 功能
