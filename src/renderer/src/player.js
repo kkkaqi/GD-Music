@@ -23,7 +23,7 @@ let playToken = 0;
 let lyricToken = 0;
 let skipTimer = null;
 let pendingSeek = null;
-let playbackIntent = null;
+let playback = null;
 
 function cancelPendingPlayback() {
   ++playToken;
@@ -31,7 +31,7 @@ function cancelPendingPlayback() {
   clearTimeout(skipTimer);
   skipTimer = null;
   pendingSeek = null;
-  playbackIntent = null;
+  playback = null;
 }
 
 function scheduleErrorSkip(token, delay) {
@@ -60,19 +60,24 @@ function restorePosition() {
 
 async function useSource(url, token, autoPlay, position) {
   if (token !== playToken) return;
+  if (playback) playback.mediaFailed = false;
   pendingSeek = { token, position };
   audio.src = url;
   audio.load();
   restorePosition();
   if (autoPlay) {
     try { await audio.play(); }
-    catch {
+    catch (err) {
       if (token === playToken) {
-        toast('播放被拦截，请再点一次播放');
-        player.playing = false;
+        if (err.name === 'NotAllowedError') {
+          toast('播放被拦截，请再点一次播放');
+          player.playing = false;
+          if (playback) playback.autoPlay = false;
+        } else if (err.name !== 'AbortError') throw err;
       }
     }
   }
+  if (token === playToken && playback?.mediaFailed) throw Error('音频加载失败');
 }
 
 export const isCurrent = (track) => !!track && keyOf(track) === keyOf(currentTrack.value);
@@ -105,24 +110,25 @@ async function loadLyrics(track, token) {
 /* ------------------------------ 播放 ------------------------------ */
 
 /** 当前源拿不到播放地址时，用「歌名+歌手」去其他开放源找同曲目替补 */
-async function tryAltSources(track, token, autoPlay, position) {
+async function tryAltSources(context) {
+  const { original: track, token } = context;
   const query = `${track.name} ${track.artist[0] || ''}`.trim();
   const alts = SOURCES.filter((s) => s.open && s.value !== track.source);
   for (const alt of alts) {
+    if (context.triedSources.has(alt.value)) continue;
+    context.triedSources.add(alt.value);
     try {
       const list = await Api.search({ source: alt.value, name: query, count: 5 });
       if (token !== playToken) return false;
       const cand = (list || []).find((t) => sameRecording(track, t));
       if (!cand) continue;
-      const res = await Api.url({ source: cand.source, id: cand.id, url_id: cand.url_id, br: S.quality });
+      await loadTrackSource(cand, context);
       if (token !== playToken) return false;
       const idx = S.queueIndex;
       if (idx >= 0) {
         S.queue.splice(idx, 1, cand);
         persist();
       }
-      await useSource(res.url, token, autoPlay, position);
-      if (token !== playToken) return false;
       loadLyrics(cand, token);
       coverUrl(cand).then((url) => {
         if (token === playToken) applyCover(url);
@@ -136,18 +142,73 @@ async function tryAltSources(track, token, autoPlay, position) {
   return false;
 }
 
+async function loadTrackSource(track, context, refresh = false) {
+  const { token } = context;
+  if (refresh) context.refreshedSources.add(track.source);
+  const res = await Api.url({ source: track.source, id: track.id, url_id: track.url_id, br: S.quality, refresh });
+  if (token !== playToken) return;
+  context.track = track;
+  try {
+    await useSource(res.url, token, context.autoPlay, context.position);
+  } catch (err) {
+    if (token !== playToken) return;
+    if (context.mediaFailed && !context.refreshedSources.has(track.source)) {
+      return loadTrackSource(track, context, true);
+    }
+    throw err;
+  }
+}
+
+function failPlayback(context, error, delay) {
+  if (context.token !== playToken) return;
+  context.failed = true;
+  audio.removeAttribute('src');
+  player.buffering = false;
+  player.playing = false;
+  toast(error?.message || '这首歌暂时无法播放', 'err');
+  if (context.autoPlay) scheduleErrorSkip(context.token, delay);
+}
+
+async function recoverMedia(context) {
+  if (context.recovering || context.failed || context.token !== playToken) return;
+  context.recovering = true;
+  context.position = pendingSeek?.position ?? audio.currentTime ?? player.position;
+  player.buffering = true;
+  audio.pause();
+  player.playing = context.autoPlay;
+  try {
+    if (!context.refreshedSources.has(context.track.source)) {
+      try {
+        await loadTrackSource(context.track, context, true);
+        return;
+      } catch { if (context.token !== playToken) return; }
+    }
+    const switched = await tryAltSources(context);
+    if (!switched) failPlayback(context, Error('音频加载失败，所有匹配音源均不可用'), 900);
+  } finally {
+    context.recovering = false;
+    if (context.token === playToken) {
+      player.buffering = false;
+    }
+  }
+}
+
 export async function loadAndPlay(autoPlay = true, { position = 0 } = {}) {
   const track = currentTrack.value;
   if (!track) return;
   cancelPendingPlayback();
   const token = playToken;
-  playbackIntent = autoPlay;
+  const context = playback = { token, original: track, track, autoPlay, position,
+    triedSources: new Set([track.source]), refreshedSources: new Set(), recovering: true,
+    mediaFailed: false, failed: false };
   audio.pause();
   audio.removeAttribute('src');
   audio.load();
   player.position = position;
+  S.lastTime = position;
   player.duration = 0;
   player.buffering = true;
+  player.playing = context.autoPlay;
   pushRecent(track);
 
   coverUrl(track).then((url) => {
@@ -157,23 +218,19 @@ export async function loadAndPlay(autoPlay = true, { position = 0 } = {}) {
   loadLyrics(track, token);
 
   try {
-    const res = await Api.url({ source: track.source, id: track.id, url_id: track.url_id, br: S.quality });
-    if (token !== playToken) return;
-    await useSource(res.url, token, autoPlay, position);
+    await loadTrackSource(track, context);
     if (token !== playToken) return;
     player.buffering = false;
   } catch (err) {
     if (token !== playToken) return;
     audio.pause();
-    const switched = await tryAltSources(track, token, autoPlay, position);
+    const switched = await tryAltSources(context);
     if (token !== playToken) return;
     player.buffering = false;
     if (switched) return;
-    audio.removeAttribute('src');
-    toast(err.message || '这首歌暂时无法播放', 'err');
-    if (autoPlay) scheduleErrorSkip(token, 1500);
+    failPlayback(context, err, 1500);
   } finally {
-    if (token === playToken) playbackIntent = null;
+    context.recovering = false;
   }
 }
 
@@ -277,10 +334,18 @@ export function togglePlay() {
     toast('先搜一首歌吧');
     return;
   }
-  if (!audio.src) {
-    loadAndPlay(true);
+  if (playback && player.buffering && !playback.failed) {
+    playback.autoPlay = !playback.autoPlay;
+    player.playing = playback.autoPlay;
+    if (!playback.autoPlay) audio.pause();
+    else if (audio.src) audio.play().catch(() => {});
     return;
   }
+  if (!audio.src) {
+    loadAndPlay(true, { position: player.position || 0 });
+    return;
+  }
+  if (playback) playback.autoPlay = audio.paused;
   if (audio.paused) audio.play().catch(() => {});
   else audio.pause();
 }
@@ -325,7 +390,7 @@ export async function cycleQuality() {
 
 export async function setQuality(value) {
   if (!QUALITIES.some((q) => q.value === value) || value === S.quality) return;
-  const autoPlay = playbackIntent ?? !audio.paused;
+  const autoPlay = playback?.recovering ? playback.autoPlay : !audio.paused;
   const position = pendingSeek?.position ?? (audio.src ? audio.currentTime : player.position);
   S.quality = value;
   persist();
@@ -351,6 +416,7 @@ export function syncLyricIndex(time) {
 /* ------------------------------ 事件 ------------------------------ */
 
 audio.addEventListener('play', () => {
+  if (playback) playback.autoPlay = true;
   player.playing = true;
 });
 
@@ -390,10 +456,10 @@ audio.addEventListener('timeupdate', () => {
 audio.addEventListener('ended', () => next(true));
 
 audio.addEventListener('error', () => {
-  if (!audio.src) return;
-  player.buffering = false;
-  toast('音频加载失败，正在切换下一首', 'err');
-  scheduleErrorSkip(playToken, 900);
+  if (!audio.src || !playback || playback.failed) return;
+  const context = playback;
+  context.mediaFailed = true;
+  recoverMedia(context).catch(err => failPlayback(context, err, 900));
 });
 
 if (window.bridge && window.bridge.media) {
@@ -403,8 +469,12 @@ if (window.bridge && window.bridge.media) {
     else if (cmd === 'prev') prev();
     else if (cmd === 'like') toggleLikeCurrent();
     else if (cmd === 'stop') {
+      clearTimeout(skipTimer);
+      if (playback) { playback.autoPlay = false; playback.position = 0; }
+      if (pendingSeek) pendingSeek.position = 0;
       audio.pause();
       audio.currentTime = 0;
+      player.position = S.lastTime = 0;
     }
   });
 }

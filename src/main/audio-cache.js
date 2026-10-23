@@ -18,6 +18,7 @@ class AudioCache {
     this.inflight = new Map();
     this.wanted = new Map();
     this.failures = new Map();
+    this.refreshWanted = new Set();
     this.worker = null;
     this.active = '';
     this.now = Date.now;
@@ -52,19 +53,23 @@ class AudioCache {
     } catch { return null; }
   }
   lookup(p) { return this.read(this.key(p)); }
-  async resolve(p) { return this.lookup(p) || this.resolver(p); }
+  async resolve(p) { return this.lookup(p) || this.resolver(p, { refresh: p.refresh === true }); }
   ensure(p) {
     if (!canDownload(p.source)) return Promise.reject(Error('Embeat 仅支持在线播放，不提供音频下载'));
     const key = this.key(p);
     const found = this.lookup(p);
     if (found) return Promise.resolve(found);
     if (this.inflight.has(key)) return this.inflight.get(key);
-    const task = this.download(p, key).finally(() => this.inflight.delete(key));
+    const refresh = this.refreshWanted.delete(key);
+    const task = this.download(p, key, refresh).catch(err => {
+      if (!refresh && [403, 410].includes(err.status)) return this.download(p, key, true);
+      throw err;
+    }).finally(() => this.inflight.delete(key));
     this.inflight.set(key, task);
     return task;
   }
-  async download(p, key) {
-    const meta = await this.resolver(p, { background: true, onWait: ms => {
+  async download(p, key, refresh = false) {
+    const meta = await this.resolver(p, { background: true, refresh, onWait: ms => {
       this.waitUntil = ms ? this.now() + ms : 0;
       this.waitReason = ms ? '等待请求额度，稍后自动继续' : '';
     } });
@@ -85,6 +90,7 @@ class AudioCache {
       timeout.refresh();
       const type = (res.headers.get('content-type') || 'application/octet-stream').split(';')[0];
       if (!res.ok || !res.body || /text|json|xml/i.test(type)) {
+        await res.body?.cancel().catch(() => {});
         throw Object.assign(Error(`音频下载失败（HTTP ${res.status}）`), {
           status: res.status, retryable: res.status === 429 || res.status >= 500,
           retryAfterMs: Math.max(retryAfterMs(res.headers.get('retry-after'), this.now()), res.status === 429 ? 300000 : 0),
@@ -135,6 +141,7 @@ class AudioCache {
       const p = { source: t.source || 'netease', id: String(t.id), url_id: t.url_id, br, name: t.name };
       return [this.key(p), p];
     }));
+    for (const key of this.refreshWanted) if (!this.wanted.has(key)) this.refreshWanted.delete(key);
     this.start();
   }
   start() {
@@ -182,7 +189,11 @@ class AudioCache {
     this.waitReason = '';
   }
   async idle() { await this.worker; }
-  retry() { this.failures.clear(); this.start(); }
+  retry() {
+    for (const key of this.failures.keys()) if (this.wanted.has(key)) this.refreshWanted.add(key);
+    this.failures.clear();
+    this.start();
+  }
   status() {
     let ready = 0, failed = 0, retrying = 0;
     for (const [key, p] of this.wanted) {

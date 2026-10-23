@@ -19,7 +19,8 @@ Tray.prototype.setContextMenu = function(menu) {
   return nativeSetContextMenu.call(this, menu);
 };
 const api = require('../src/main/api');
-api.search = async () => [];
+api.search = async params => params.name.includes('媒体换源测试') ?
+  [{id:'recovery-alt',name:'媒体换源测试',source:params.source,artist:['测试']}] : [];
 api.pic = async () => ({ url: '' });
 api.lyric = async () => ({ lyric: '[00:00.00]桌面歌词测试 <img src=x>\n[00:01.20]下一句歌词\n[00:40.00]之后的歌词', tlyric: '[00:00.00]中文翻译 <b>首句</b>\n[00:01.20]第二句中文翻译' });
 // 本地静音 WAV 验证真实 HTMLAudioElement 的换质定位，无外部音源依赖。
@@ -29,6 +30,11 @@ wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
 wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(16000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
 wav.write('data', 36); wav.writeUInt32LE(wav.length - 44, 40);
 const server = require('node:http').createServer((req, res) => {
+  if (req.url === '/decode-failure.wav') {
+    res.writeHead(200, {'Content-Type':'audio/wav'});
+    res.end('not a valid audio file');
+    return;
+  }
   const range = /bytes=(\d+)-(\d*)/.exec(req.headers.range || '');
   const start = range ? Number(range[1]) : 0;
   const end = range && range[2] ? Math.min(Number(range[2]), wav.length - 1) : wav.length - 1;
@@ -39,7 +45,13 @@ const server = require('node:http').createServer((req, res) => {
 const listening = new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const playbackReferers = [];
 server.on('request', req => { playbackReferers.push(req.headers.referer); });
-api.trackUrl = async ({ br }) => ({ url: `http://127.0.0.1:${server.address().port}/song-${br}.wav`, br });
+const resolutionCalls=[];
+api.trackUrl = async ({ id, source, br }, options={}) => {
+  resolutionCalls.push({id,source,refresh:options.refresh===true});
+  const broken=((id==='recovery-refresh'||id==='recovery-paused')&&!options.refresh) ||
+    (id==='recovery-alt'&&source==='netease');
+  return {url:`http://127.0.0.1:${server.address().port}/${broken?'decode-failure':`song-${br}`}.wav`,br};
+};
 // 直接观测真实 Chromium 下载入口，不替换它可能依赖的全局 fetch。
 let chromiumRequests = 0;
 const nativeNetFetch = net.fetch.bind(net);
@@ -52,7 +64,7 @@ app.on('web-contents-created', (_event, contents) => {
     if (level === 'error') rendererErrors.push(message);
   });
 });
-const watchdog = setTimeout(() => { console.error('Electron smoke timeout'); app.exit(1); }, 25000);
+const watchdog = setTimeout(() => { console.error('Electron smoke timeout'); app.exit(1); }, 35000);
 app.whenReady().then(async () => {
   let cursorOverride = null;
   const nativeCursor = screen.getCursorScreenPoint.bind(screen);
@@ -425,6 +437,22 @@ app.whenReady().then(async () => {
     await overlayJs("window.desktopLyrics.hide()");
     checks.push('shared lock position, transparent lock backgrounds, hover and unlock');
     await js(fs.readFileSync(process.env.GD_SMOKE_BUNDLE, 'utf8'));
+    await wc.executeJavaScript("smokeHarness.setQueue([{id:'resume',name:'续播测试',source:'netease',artist:['测试']}],0,false);smokeHarness.S.lastTime=73;smokeHarness.player.position=73;smokeHarness.togglePlay()",true);
+    await waitFor('!smokeHarness.audio.paused && smokeHarness.audio.currentTime>=73 && smokeHarness.audio.currentTime<76');
+    checks.push('real audio first playback restores saved position');
+    await wc.executeJavaScript("smokeHarness.setQueue([{id:'recovery-refresh',name:'媒体刷新测试',source:'netease',artist:['测试']}],0,false);smokeHarness.loadAndPlay(true)",true);
+    await waitFor('!smokeHarness.audio.paused && smokeHarness.audio.readyState>=2 && smokeHarness.audio.src.includes("song-")');
+    assert.deepEqual(resolutionCalls.filter(call=>call.id==='recovery-refresh').map(call=>call.refresh),[false,true]);
+    checks.push('real decoder error refreshes same source once');
+    await wc.executeJavaScript("smokeHarness.setQueue([{id:'recovery-alt',name:'媒体换源测试',source:'netease',artist:['测试']}],0,false);smokeHarness.loadAndPlay(true)",true);
+    await waitFor('smokeHarness.currentTrack.value.source==="tencent" && !smokeHarness.audio.paused');
+    assert.equal(resolutionCalls.filter(call=>call.id==='recovery-alt'&&call.source==='netease').length,2);
+    checks.push('real decoder failure switches matched source after refresh fails');
+    await js("smokeHarness.setQueue([{id:'recovery-paused',name:'暂停恢复测试',source:'netease',artist:['测试']}],0,false);smokeHarness.loadAndPlay(false)");
+    await waitFor('smokeHarness.audio.readyState>=2 && smokeHarness.audio.src.includes("song-")');
+    assert.equal(await js('smokeHarness.audio.paused'),true);
+    assert.equal(await js('smokeHarness.player.playing'),false);
+    checks.push('real paused media recovery remains paused');
     await js("smokeHarness.setQueue([{id:'1',name:'音质测试',source:'netease',artist:['测试']}],0,false); smokeHarness.loadAndPlay(false)");
     await waitFor('smokeHarness.audio.readyState >= 1');
     await js('smokeHarness.audio.currentTime=42; smokeHarness.cycleQuality()');

@@ -5,14 +5,14 @@
 
 > **仅供学习交流，请勿商用。** 音乐版权归各平台与原作者所有。收藏的音频会下载到当前用户的本地目录。
 
-**使用帮助：[安装、歌单导入、下载、歌词、托盘与常见问题](docs/USER_GUIDE.md)** · 当前版本：**v1.0.7** · [已知问题审查记录](docs/reviews/2026-10-23-code-review.md)
+**使用帮助：[安装、歌单导入、下载、歌词、托盘与常见问题](docs/USER_GUIDE.md)** · 当前版本：**v1.0.8** · [审查与修复记录](docs/reviews/2026-10-23-v1.0.7-code-review.md)
 
 ## 下载安装
 
-前往 [v1.0.7 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.7)，在 Assets 中选择：
+前往 [v1.0.8 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.8)，在 Assets 中选择：
 
-- [Windows x64 安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.7/GD-Music-1.0.7-Windows-x64-Setup.exe)：双击安装，通过桌面或开始菜单启动。
-- [Windows x64 免安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.7/GD-Music-1.0.7-Windows-x64-Portable.exe)：下载后双击运行。
+- [Windows x64 安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.8/GD-Music-1.0.8-Windows-x64-Setup.exe)：双击安装，通过桌面或开始菜单启动。
+- [Windows x64 免安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.8/GD-Music-1.0.8-Windows-x64-Portable.exe)：下载后双击运行。
 
 两个版本均自带运行环境，无需安装 Node.js。发布页附有 `SHA256SUMS.txt`，用于核对下载文件。GitHub 自动生成的 Source code 压缩包是源码，不是安装包。
 
@@ -120,7 +120,7 @@ electron-music/
 
 音频使用 Electron 的 Chromium 网络通道下载。播放和 HTTPS 音频下载携带当前官网 `https://music.gdstudio.org/` 来源；HTTP 下载不发送 HTTPS Referer，避免 Chromium 拒绝请求。下载使用完整 Range、核对文件长度，按实际 MP3/FLAC/M4A/WebM 等格式保存；手动下载复用完整缓存，不会额外请求已有文件。
 
-音频地址只缓存成功结果；旧版本留下的空地址缓存会被忽略。空地址失败可以重新解析，但已缓存签名地址失效后，重试仍可能使用旧链接，详见下方已知问题。
+音频地址只缓存成功结果；旧版本留下的空地址缓存会被忽略。下载遇到 HTTP 403/410 时清除目标 URL 的内存及磁盘缓存，刷新后重试一次；点击失败任务的“重试”也会重新解析。刷新请求仍合并并发解析并遵守共享限流，完整本地音频不重新下载。
 
 | 接口 | 用途 | 缓存 |
 | --- | --- | --- |
@@ -163,13 +163,10 @@ electron-music/
 
 ### 其它
 
-- 已取得的音频链接失效后，下载重试目前没有主动刷新 URL 缓存。
-- 自动换源主要覆盖获取地址失败；实际媒体加载失败时，仍可能直接跳过歌曲。
-- 重启后界面会恢复保存的进度，但首次点击播放目前可能从零开始。
 - 部分曲目返回空地址，或音源暂不可用；不能据此断言歌曲在所有平台都不可用。
 - 专辑图与原词来自第三方接口，个别曲目没有翻译歌词
 
-复现记录和修复建议见 [2026-10-23 项目审查](docs/reviews/2026-10-23-code-review.md)。
+v1.0.8 已修复失效链接重试、媒体加载失败换源、首次续播进度及搜索历史竞态。媒体错误会有限刷新同源地址，再按歌名和歌手匹配其他音源；暂停时恢复后仍暂停，全部失败才在有播放意图时跳歌。复现与修复记录见 [项目审查](docs/reviews/2026-10-23-v1.0.7-code-review.md)。
 
 ## 免责声明
 

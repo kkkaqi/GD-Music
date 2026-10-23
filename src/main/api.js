@@ -121,19 +121,24 @@ async function request(params, ttl, options = {}, transport = null) {
   const query = buildQuery(params);
   const key = transport ? `website:${query}` : query;
 
+  // 刷新仍合并正在解析的同一请求；清除磁盘副本，避免失败后又读回旧签名。
+  if (inflight.has(key)) return inflight.get(key);
+  if (options.refresh) {
+    mem.delete(key);
+    const file = cacheFile(key);
+    if (file) { try { fs.unlinkSync(file); } catch {} }
+  }
   const hit = mem.get(key);
-  if (hit && hit.exp > Date.now() && cacheable(params, hit.value)) {
+  if (!options.refresh && hit && hit.exp > Date.now() && cacheable(params, hit.value)) {
     stats.cacheHits++;
     return hit.value;
   }
-  const disk = readDisk(key);
+  const disk = options.refresh ? null : readDisk(key);
   if (disk !== null && cacheable(params, disk.value)) {
     stats.cacheHits++;
     mem.set(key, disk);
     return disk.value;
   }
-  if (inflight.has(key)) return inflight.get(key);
-
   const task = (async () => {
     await gate.acquire(options);
     stats.requests++;

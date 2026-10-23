@@ -1,6 +1,6 @@
 {
   "name": "gd-music-desktop",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "description": "GD Music —— 基于 Electron + Vue 3 的桌面音乐播放器",
   "main": "src/main/main.js",

@@ -43,6 +43,42 @@ function make(t, fetcher = async () => new Response('audio-bytes', { headers: { 
   return cache;
 }
 
+for (const status of [403,410]) test(`失效链接 HTTP ${status} 仅刷新一次并保存新音频`, async t => {
+  const urls=[],options=[];
+  const cache=make(t,async url => {urls.push(url);return url.endsWith('old.mp3') ? new Response('',{status}) : new Response('fresh-audio',{headers:{'Content-Type':'audio/mpeg'}});});
+  cache.resolver=async (_p,opt) => {options.push(opt);return {url:`https://example.test/${opt.refresh ? 'fresh' : 'old'}.mp3`};};
+  const saved=await cache.ensure(track);
+  assert.equal(fs.readFileSync(saved.file,'utf8'),'fresh-audio');
+  assert.deepEqual(urls,['https://example.test/old.mp3','https://example.test/fresh.mp3']);
+  assert.equal(options[1].background,true);
+  assert.equal(options[1].refresh,true);
+});
+
+test('持续403有次数限制，手动重试强制重新解析且不重复下载完整文件',async t => {
+  let allowed=false; const options=[];let downloads=0;
+  const cache=make(t,async () => {downloads++;return allowed ? new Response('good-audio',{headers:{'Content-Type':'audio/mpeg'}}) : new Response('',{status:403});});
+  cache.resolver=async (_p,opt) => {options.push(opt);return {url:'https://example.test/song.mp3'};};
+  cache.syncFavorites([track]);await cache.idle();
+  assert.equal(cache.status().failed,1);
+  assert.equal(downloads,2);
+  allowed=true;cache.retry();await cache.idle();
+  assert.equal(cache.status().ready,1);
+  assert.equal(options.at(-1).refresh,true);
+  const previous=downloads;
+  await cache.resolve({...track,refresh:true});cache.retry();await cache.idle();
+  assert.equal(downloads,previous);
+});
+
+test('播放请求可刷新远程URL，仍优先使用完整本地文件',async t => {
+  const cache=make(t);let options;
+  cache.resolver=async (_p,opt) => {options=opt;return {url:'https://example.test/new.mp3'};};
+  await cache.resolve({...track,refresh:true});
+  assert.equal(options.refresh,true);
+  await cache.ensure(track);
+  cache.resolver=async () => {throw Error('不应解析完整缓存');};
+  assert.equal((await cache.resolve({...track,refresh:true})).cached,true);
+});
+
 test('较大无损文件流式保存，不再被256MB限制拒绝', async t => {
   const total = 256 * 1024 * 1024 + 1;
   let remaining = total;

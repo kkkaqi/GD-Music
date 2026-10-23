@@ -451,13 +451,20 @@ function pushHistory(spec) {
   ui.historyPos = ui.history.length - 1;
 }
 
+function invalidateSearch() {
+  ++searchSeq;
+  ui.search.loading = false;
+}
+
 export function goDiscover() {
+  invalidateSearch();
   ui.view = 'discover';
   pushHistory({ type: 'discover' });
   refreshQuota();
 }
 
 export function openCollection(spec) {
+  invalidateSearch();
   ui.collection = spec;
   ui.view = 'collection';
   pushHistory({ type: 'collection', spec });
@@ -480,6 +487,7 @@ export function goForward() {
 
 function applyHistory(spec) {
   if (!spec) return;
+  invalidateSearch();
   if (spec.type === 'discover') {
     ui.view = 'discover';
   } else if (spec.type === 'search') {

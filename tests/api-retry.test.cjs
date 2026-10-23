@@ -22,6 +22,50 @@ function setup(responses) {
   return { api: context.module.exports, gate: gates[0], calls };
 }
 
+test('刷新音频地址清除目标内存及磁盘缓存，并保留其他音质', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gd-url-refresh-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const first = setup([]); let version = 0;
+  first.api.initCache(dir);
+  first.api.setWebsiteRequester(async p => Response.json({ url: `https://example.test/${p.br}-${++version}.mp3`, br: p.br }));
+  const p = {source:'joox',id:'refresh',br:'320'};
+  const old = await first.api.trackUrl(p);
+  const otherQuality = await first.api.trackUrl({...p,br:'128'});
+  const fresh = await first.api.trackUrl(p, {refresh:true});
+  assert.notEqual(fresh.url, old.url);
+  assert.equal((await first.api.trackUrl({...p,br:'128'})).url, otherQuality.url);
+  const restarted = setup([]);
+  restarted.api.initCache(dir);
+  restarted.api.setWebsiteRequester(async () => { throw Error('不应联网'); });
+  assert.equal((await restarted.api.trackUrl(p)).url, fresh.url);
+});
+
+test('并发刷新同一地址只解析一次，仍消耗共享额度', async () => {
+  const {api,gate} = setup([]); let calls = 0;
+  api.setWebsiteRequester(async () => Response.json({url:`https://example.test/${++calls}.mp3`,br:320}));
+  const p = {source:'joox',id:'concurrent-refresh'};
+  await api.trackUrl(p);
+  const values = await Promise.all([api.trackUrl(p,{refresh:true}),api.trackUrl(p,{refresh:true}),api.trackUrl(p)]);
+  assert.equal(calls,2);
+  assert.ok(values.every(value => value.url === 'https://example.test/2.mp3'));
+  assert.equal(gate.stamps.length,2);
+});
+
+test('刷新失败不能恢复旧磁盘链接，429 仍保留冷却', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gd-url-refresh-error-'));
+  t.after(() => fs.rmSync(dir, {recursive:true,force:true}));
+  const {api,gate} = setup([]); let calls=0;
+  api.initCache(dir);
+  api.setWebsiteRequester(async () => ++calls === 1 ? Response.json({url:'https://example.test/old.mp3',br:320}) : new Response('',{status:429}));
+  const p={source:'joox',id:'refresh-error'};
+  await api.trackUrl(p);
+  await assert.rejects(api.trackUrl(p,{refresh:true}),err => err.status === 429);
+  assert.equal(gate.waitMs(),300000);
+  const restarted=setup([]); restarted.api.initCache(dir);
+  restarted.api.setWebsiteRequester(async () => Response.json({url:'https://example.test/new.mp3',br:320}));
+  assert.equal((await restarted.api.trackUrl(p)).url,'https://example.test/new.mp3');
+});
+
 test('导入解析ID失效时使用原始歌曲ID，保留同一音源和无损档位', async () => {
   const { api, calls } = setup([Response.json({ url: '', br: -1 }),
     Response.json({ url: 'https://example.test/song.flac', br: 999 })]);
