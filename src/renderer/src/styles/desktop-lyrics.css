@@ -1,0 +1,49 @@
+:root { font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif; color: #fff; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+body { user-select: none; }
+.desktop-lyrics { position: relative; height: 100%; border-radius: 14px; border: 1px solid transparent; background: transparent; overflow: hidden; }
+.desktop-lyrics.is-hovered:not(.locked) { border-color: rgb(255 255 255 / .45); background: rgb(38 40 44 / var(--panel-opacity)); }
+.lyrics-toolbar { height: 46px; padding: 10px 20px 0; display: flex; align-items: center; justify-content: space-between; visibility: hidden; -webkit-app-region: no-drag; }
+.is-hovered:not(.locked) .lyrics-toolbar { visibility: visible; -webkit-app-region: drag; }
+.toolbar-group { display: flex; align-items: center; gap: 14px; }
+.toolbar-group.playback { position: absolute; left: 50%; transform: translateX(-50%); gap: 24px; }
+.lyrics-brand { display: flex; align-items: center; }
+.lyrics-brand svg { width: 29px; height: 29px; }
+button { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 36px; border: none; border-radius: 6px; padding: 3px; background: transparent; color: #fff; cursor: pointer; -webkit-app-region: no-drag; }
+button svg { width: 28px; height: 28px; display: block; }
+button:hover, button.active { background: rgb(255 255 255 / .13); }
+button:focus-visible { outline: 2px solid var(--lyric-color); outline-offset: 1px; }
+button.liked { color: var(--lyric-color); }
+.lyric-content { padding: 5px 28px 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 9px; text-align: center; -webkit-app-region: drag; }
+.lyric-pair { width: 100%; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.current-line, .next-line, .lyric-translation { color: var(--lyric-color); opacity: 1; -webkit-text-stroke: .8px var(--lyric-outline); paint-order: stroke fill; text-shadow: 0 1px 2px rgb(0 0 0 / .8); overflow-wrap: anywhere; }
+.current-line, .next-line { width: 100%; font-size: var(--lyric-size); font-weight: 700; line-height: 1.4; }
+.next-line { font-size: calc(var(--lyric-size) * .88); }
+.lyric-translation { width: 100%; font-size: calc(var(--lyric-size) * .6); font-weight: 600; line-height: 1.35; }
+.next-translation { font-size: calc(var(--lyric-size) * .54); }
+.next-line, .next-translation { color: #c4c4c4; -webkit-text-stroke-color: #000; }
+.locked .lyrics-toolbar { visibility: hidden; -webkit-app-region: no-drag; }
+.locked { border-color: transparent; background: transparent; }
+.locked .lyric-content { -webkit-app-region: no-drag; }
+.lyrics-lock-toggle { position: relative; z-index: 3; visibility: hidden; pointer-events: none; background: transparent; color: #65686d; -webkit-app-region: no-drag; }
+.is-hovered .lyrics-lock-toggle { visibility: visible; pointer-events: auto; }
+.lyrics-lock-toggle:hover { background: transparent; color: #65686d; }
+.locked .lyrics-lock-toggle, .locked .lyrics-lock-toggle:hover { color: #000; }
+.desktop-lyrics:not(.locked) .lyrics-lock-toggle { background: transparent; color: #fff; }
+.desktop-lyrics:not(.locked) .lyrics-lock-toggle:hover { background: rgb(255 255 255 / .13); color: #fff; }
+.lyrics-settings { position: absolute; top: 49px; right: 16px; width: 305px; max-width: calc(100% - 32px); max-height: calc(100% - 58px); -webkit-app-region: no-drag; }
+.lyrics-settings-body { width: 100%; padding: 10px 16px 13px; border: 1px solid #55585f; border-radius: 10px; background: #242528; box-shadow: 0 6px 24px #0005; }
+.lyrics-settings label { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; margin-bottom: 10px; }
+.lyrics-settings input[type="range"] { width: 150px; accent-color: var(--lyric-color); }
+.font-size-trigger { width: 100%; height: 36px; padding: 0 8px; margin-bottom: 10px; justify-content: space-between; font: inherit; font-size: 13px; }
+.font-size-summary { display: flex; align-items: center; gap: 12px; color: #d0d0d0; }
+.font-size-trigger svg { width: 16px; height: 16px; }
+.font-size-menu { position: absolute; top: 0; right: calc(100% + 4px); width: 116px; padding: 6px; border: 1px solid #55585f; border-radius: 10px; background: #202124; box-shadow: 0 6px 24px #0005; }
+.font-size-menu button { width: 100%; height: 34px; justify-content: flex-start; gap: 15px; padding: 0 12px; font-size: 14px; }
+.font-choice-dot { position: relative; width: 15px; height: 15px; border: 2px solid #92969b; border-radius: 50%; }
+.font-size-menu .selected .font-choice-dot { border-color: #a4c9ff; }
+.font-size-menu .selected .font-choice-dot::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: #a4c9ff; }
+.lyrics-settings input[type="color"] { width: 54px; height: 24px; border: none; }
+.lyrics-settings small { display: block; font-size: 11px; color: #babcc2; line-height: 1.5; }
+@media (max-width: 640px) { .lyrics-toolbar { padding-inline: 12px; } .toolbar-group { gap: 5px; } .toolbar-group.playback { gap: 8px; } }

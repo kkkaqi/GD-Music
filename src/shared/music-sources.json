@@ -1,0 +1,12 @@
+[
+  { "value": "netease", "label": "网易云", "open": true, "album": true, "pageSize": 20, "download": true },
+  { "value": "tencent", "label": "QQ 音乐（暂无法播放）", "open": true, "album": true, "pageSize": 20, "download": true },
+  { "value": "kuwo", "label": "酷我", "open": true, "album": true, "pageSize": 20, "download": true },
+  { "value": "tidal", "label": "TIDAL", "open": true, "album": true, "pageSize": 20, "download": true },
+  { "value": "qobuz", "label": "Qobuz（暂未返回歌曲）", "open": true, "album": true, "pageSize": 20, "download": true },
+  { "value": "joox", "label": "JOOX", "open": true, "album": true, "pageSize": 20, "pagination": false, "download": true },
+  { "value": "bilibili", "label": "哔哩哔哩", "open": true, "album": false, "pageSize": 20, "download": true },
+  { "value": "apple", "label": "Apple Music", "open": true, "album": true, "pageSize": 20, "download": true },
+  { "value": "ytmusic", "label": "YouTube Music（油管）", "open": true, "album": true, "pageSize": 20, "download": true },
+  { "value": "embeat", "label": "Embeat（仅在线播放）", "open": true, "album": false, "pageSize": 20, "download": false }
+]

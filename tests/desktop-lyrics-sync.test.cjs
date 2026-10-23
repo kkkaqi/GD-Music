@@ -1,0 +1,31 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { nextTick } = require('vue');
+const { setup, track } = require('./helpers/renderer.cjs');
+
+test('桌面歌词同步当前句及下一句翻译，跟随进度和翻译开关更新', async t => {
+  const { a, bridge } = setup();
+  let frame;
+  bridge.lyrics = { onSettings: () => () => {}, status: async () => ({}), update: value => { frame = value; } };
+  a.S.queue = [track];
+  a.player.lines = [{ text: 'First line', tr: '第一句' }, { text: 'Second line', tr: '第二句' }, { text: 'Third line', tr: '' }];
+  a.player.active = 0;
+  t.after(a.initDesktopLyrics());
+  assert.equal(frame.currentTranslation, '第一句');
+  assert.equal(frame.nextTranslation, '第二句');
+  a.player.active = 1;
+  await nextTick();
+  assert.equal(frame.current, 'Second line');
+  assert.equal(frame.currentTranslation, '第二句');
+  assert.equal(frame.nextTranslation, '');
+  a.S.showTranslation = false;
+  await nextTick();
+  assert.equal(frame.currentTranslation, '');
+  a.S.showTranslation = true;
+  await nextTick();
+  assert.equal(frame.currentTranslation, '第二句');
+  a.player.lines = [];
+  await nextTick();
+  assert.equal(frame.currentTranslation, '');
+  assert.equal(frame.nextTranslation, '');
+});

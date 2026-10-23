@@ -1,0 +1,10 @@
+node_modules/
+src/renderer/dist/
+*.log
+.DS_Store
+release/
+.env
+.env.*
+!.env.example
+coverage/
+*.log.*
