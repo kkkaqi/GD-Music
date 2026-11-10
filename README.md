@@ -5,14 +5,14 @@
 
 > **仅供学习交流，请勿商用。** 音乐版权归各平台与原作者所有。收藏的音频会下载到当前用户的本地目录。
 
-**使用帮助：[安装、歌单导入、下载、歌词、托盘与常见问题](docs/USER_GUIDE.md)** · 当前版本：**v1.0.8** · [审查与修复记录](docs/reviews/2026-10-23-v1.0.7-code-review.md)
+**使用帮助：[安装、歌单导入、下载、歌词、托盘与常见问题](docs/USER_GUIDE.md)** · 当前版本：**v1.0.9** · [审查与修复记录](docs/reviews/2026-10-23-v1.0.7-code-review.md)
 
 ## 下载安装
 
-前往 [v1.0.8 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.8)，在 Assets 中选择：
+前往 [v1.0.9 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.9)，在 Assets 中选择：
 
-- [Windows x64 安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.8/GD-Music-1.0.8-Windows-x64-Setup.exe)：双击安装，通过桌面或开始菜单启动。
-- [Windows x64 免安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.8/GD-Music-1.0.8-Windows-x64-Portable.exe)：下载后双击运行。
+- [Windows x64 安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.9/GD-Music-1.0.9-Windows-x64-Setup.exe)：双击安装，通过桌面或开始菜单启动。
+- [Windows x64 免安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.9/GD-Music-1.0.9-Windows-x64-Portable.exe)：下载后双击运行。
 
 两个版本均自带运行环境，无需安装 Node.js。发布页附有 `SHA256SUMS.txt`，用于核对下载文件。GitHub 自动生成的 Source code 压缩包是源码，不是安装包。
 
@@ -141,6 +141,8 @@ electron-music/
 | --- | --- |
 | `Space` | 播放 / 暂停 |
 | `←` / `→` | 后退 / 前进 5 秒 |
+| `Ctrl+←` / `Ctrl+Home` | 上一首 |
+| `Ctrl+→` / `Ctrl+End` | 下一首 |
 | `↑` / `↓` | 音量 ±5% |
 | `/` | 聚焦搜索框 |
 | `Esc` | 关闭菜单 / 弹窗 / 播放页 / 队列 |

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onUnmounted } from 'vue';
 import Icon from './Icon.vue';
 import SliderBar from './SliderBar.vue';
 import { S, ui, currentTrack, QUALITIES, isLiked, toggleLike, fmtTime } from '../store';
@@ -7,6 +7,8 @@ import { player, seekSeconds, cycleQuality, togglePlay, next, prev, cycleMode, s
 
 const scrollEl = ref(null);
 const dragRatio = ref(null);
+const LYRIC_FOLLOW_DELAY_MS = 3000;
+let resumeFollowTimer;
 
 const bgStyle = computed(() =>
   player.cover ? { backgroundImage: `url("${player.cover}")` } : {}
@@ -35,17 +37,34 @@ function onProgressChange(v) {
   dragRatio.value = null;
 }
 
-watch(
-  () => player.active,
-  (idx) => {
-    const box = scrollEl.value;
-    if (!box || idx < 0) return;
-    const node = box.children[idx];
-    if (!node) return;
-    const top = node.offsetTop - box.clientHeight * 0.42 + node.clientHeight / 2;
-    box.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-  }
-);
+function followActiveLyric() {
+  const box = scrollEl.value;
+  const line = box?.children[player.active];
+  if (!ui.npOpen || !line || resumeFollowTimer !== undefined) return;
+  const top = line.offsetTop - box.clientHeight * 0.42 + line.clientHeight / 2;
+  box.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+}
+
+function clearLyricFollowTimer() {
+  clearTimeout(resumeFollowTimer);
+  resumeFollowTimer = undefined;
+}
+
+function onLyricWheel(event) {
+  if (!event.deltaY || event.ctrlKey || !player.lines.length) return;
+  clearLyricFollowTimer();
+  resumeFollowTimer = setTimeout(() => {
+    resumeFollowTimer = undefined;
+    followActiveLyric();
+  }, LYRIC_FOLLOW_DELAY_MS);
+}
+
+watch(() => player.active, followActiveLyric, { flush: 'post' });
+watch([() => ui.npOpen, currentTrack], () => {
+  clearLyricFollowTimer();
+  followActiveLyric();
+}, { flush: 'post' });
+onUnmounted(clearLyricFollowTimer);
 
 function likeCurrent() {
   if (currentTrack.value) toggleLike(currentTrack.value);
@@ -57,7 +76,7 @@ function distance(i) {
 </script>
 
 <template>
-  <div v-show="ui.npOpen" class="np-page" :class="{ in: ui.npOpen }">
+  <div v-show="ui.npOpen" class="np-page">
     <div class="np-bg" :style="bgStyle"></div>
     <div class="np-veil"></div>
 
@@ -99,7 +118,7 @@ function distance(i) {
           <div v-if="!player.lines.length" class="lyrics-empty">
             {{ player.lyricLoading ? '歌词加载中…' : '暂无歌词' }}
           </div>
-          <div ref="scrollEl" class="lyrics-scroll">
+          <div ref="scrollEl" class="lyrics-scroll" @wheel.passive="onLyricWheel">
             <div
               v-for="(l, i) in player.lines"
               :key="i"

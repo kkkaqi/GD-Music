@@ -8,7 +8,10 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gd-smoke-'));
 app.setPath('userData', dir);
 const exported = path.join(dir, 'export.json');
 const name = '<img src=x data-review-injection=1>测试歌单';
-fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ playlists: [{ id: 'smoke', name, tracks: [{ id: '1', name: '测试', source: 'netease', artist: ['歌手'] }] }] }));
+const playlistTracks = ['测试', '快捷键第二首', '快捷键第三首'].map((name, i) => ({
+  id: String(i + 1), name, source: 'netease', artist: ['歌手'],
+}));
+fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ playlists: [{ id: 'smoke', name, tracks: playlistTracks }] }));
 dialog.showSaveDialog = async () => ({ canceled: false, filePath: exported });
 globalShortcut.register = () => false;
 BrowserWindow.prototype.show = function () {};
@@ -22,7 +25,15 @@ const api = require('../src/main/api');
 api.search = async params => params.name.includes('媒体换源测试') ?
   [{id:'recovery-alt',name:'媒体换源测试',source:params.source,artist:['测试']}] : [];
 api.pic = async () => ({ url: '' });
-api.lyric = async () => ({ lyric: '[00:00.00]桌面歌词测试 <img src=x>\n[00:01.20]下一句歌词\n[00:40.00]之后的歌词', tlyric: '[00:00.00]中文翻译 <b>首句</b>\n[00:01.20]第二句中文翻译' });
+api.lyric = async () => ({
+  lyric: [
+    '[00:00.00]桌面歌词测试 <img src=x>',
+    '[00:01.20]下一句歌词',
+    '[00:40.00]之后的歌词',
+    ...Array.from({ length: 19 }, (_, i) => `[00:${41 + i}.00]歌词 ${i + 4}`),
+  ].join('\n'),
+  tlyric: '[00:00.00]中文翻译 <b>首句</b>\n[00:01.20]第二句中文翻译',
+});
 // 本地静音 WAV 验证真实 HTMLAudioElement 的换质定位，无外部音源依赖。
 const wav = Buffer.alloc(44 + 8000 * 2 * 100);
 wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8);
@@ -200,7 +211,14 @@ app.whenReady().then(async () => {
     await waitFor("!!document.querySelector('.modal')");
     assert.equal(await js("!!document.querySelector('.modal [data-review-injection]')"), false); checks.push('collection untrusted name is text');
     await js("document.querySelector('.modal .btn.ghost').click(); document.querySelector('.cover-expand').click()");
-    await waitFor("document.querySelector('.np-page').classList.contains('in')");
+    const nowPlayingVisible = "getComputedStyle(document.querySelector('.np-page')).display !== 'none'";
+    await waitFor(nowPlayingVisible);
+    assert.equal(await js("getComputedStyle(document.querySelector('.np-bg')).backgroundImage"), 'none');
+    assert.ok(await js(`(() => {
+      const page = getComputedStyle(document.querySelector('.np-page'));
+      return page.opacity === '1' && page.backgroundColor === getComputedStyle(document.body).backgroundColor;
+    })()`), '没有封面时，播放页也需要不透明底色');
+    checks.push('now-playing obscures the main window without a cover');
     for (const [dx, dy] of [[2,2],[22,2],[42,2],[2,22],[22,22],[42,22],[2,42],[22,42],[42,42]]) {
       const rect = await js("document.querySelector('.np-close').getBoundingClientRect().toJSON()");
       assert.equal(rect.width, 45, '返回按钮宽度必须为45px');
@@ -211,9 +229,9 @@ app.whenReady().then(async () => {
       wc.sendInputEvent({ type: 'mouseMove', x, y });
       wc.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 });
       wc.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 });
-      await waitFor("!document.querySelector('.np-page').classList.contains('in')");
+      await waitFor(`!(${nowPlayingVisible})`);
       await js("document.querySelector('.cover-expand').click()");
-      await waitFor("document.querySelector('.np-page').classList.contains('in')");
+      await waitFor(nowPlayingVisible);
     }
     checks.push('45px back button full hit area, nine mouse click positions');
     await js("document.querySelector('.np-page button[title=播放队列]').click()");
@@ -240,7 +258,7 @@ app.whenReady().then(async () => {
     };
     assert.ok(overlay.isAlwaysOnTop());
     assert.equal(overlay.getParentWindow(), null);
-    await overlayWait("document.querySelector('.current-line').textContent.includes('桌面歌词测试')");
+    await overlayWait("document.querySelector('.current-line')?.textContent.includes('桌面歌词测试')");
     await overlayWait("document.querySelector('.current-translation')?.textContent==='中文翻译 <b>首句</b>'");
     assert.equal(await overlayJs("!!document.querySelector('.lyric-content b')"), false);
     assert.equal(await overlayJs("document.querySelector('.next-translation').textContent"), '第二句中文翻译');
@@ -436,6 +454,69 @@ app.whenReady().then(async () => {
     console.log('LYRICS_SCREENSHOT', path.join(dir, 'desktop-lyrics.png'));
     await overlayJs("window.desktopLyrics.hide()");
     checks.push('shared lock position, transparent lock backgrounds, hover and unlock');
+
+    const lyricsScrollTop = "document.querySelector('.lyrics-scroll').scrollTop";
+    await js("document.querySelector('.cover-expand').click(); document.querySelector('.ly-line').click()");
+    await waitFor("document.querySelector('.ly-line.active') === document.querySelector('.ly-line')");
+    await new Promise(resolve => setTimeout(resolve, 450));
+    const followTop = await js(lyricsScrollTop);
+    const lyricRect = await js("document.querySelector('.lyrics-scroll').getBoundingClientRect().toJSON()");
+    const wheelAtLyrics = async deltaY => {
+      await js(`(() => {
+        const box = document.querySelector('.lyrics-scroll');
+        delete box.dataset.scrollEnded;
+        box.addEventListener('scrollend', () => { box.dataset.scrollEnded = 'true'; }, { once: true });
+      })()`);
+      wc.sendInputEvent({
+        type: 'mouseWheel',
+        x: Math.round(lyricRect.left + lyricRect.width / 2),
+        y: Math.round(lyricRect.top + lyricRect.height / 2),
+        deltaY,
+      });
+      await waitFor("document.querySelector('.lyrics-scroll').dataset.scrollEnded === 'true'");
+    };
+    await wheelAtLyrics(-300);
+    const downTop = await js(lyricsScrollTop);
+    assert.ok(downTop > followTop + 100, '滚轮向下能浏览后面的歌词');
+    await wheelAtLyrics(120);
+    const browseTop = await js(lyricsScrollTop);
+    assert.ok(browseTop < downTop - 50, '滚轮向上能浏览前面的歌词');
+    await wc.executeJavaScript("document.querySelector('.np-btns button[title=播放]').click()", true);
+    await waitFor("document.querySelector('.ly-line.active .ly-text').textContent === '下一句歌词'");
+    await new Promise(resolve => setTimeout(resolve, 450));
+    assert.ok(Math.abs(await js(lyricsScrollTop) - browseTop) < 2, '浏览歌词时切到下一句不会拉回滚动位置');
+    await waitFor(`${lyricsScrollTop} < ${browseTop - 50}`);
+    await js("document.querySelector('.np-btns button[title=暂停]').click(); document.querySelector('.np-close').click()");
+    checks.push('now-playing lyrics scroll both ways, hold position during playback and resume following');
+
+    const pressPlaybackKey = (key, ctrlKey = false, target = 'body') => js(`
+      document.querySelector(${JSON.stringify(target)}).dispatchEvent(new KeyboardEvent('keydown',
+        ${JSON.stringify({ key, ctrlKey, bubbles: true, cancelable: true })}))
+    `);
+    const waitForTrack = track => waitFor(`document.querySelector('.pl-title').textContent === ${JSON.stringify(track)}`);
+    await pressPlaybackKey('ArrowRight', true);
+    await waitForTrack('快捷键第二首');
+    await pressPlaybackKey('End', true);
+    await waitForTrack('快捷键第三首');
+    await waitFor("document.body.classList.contains('playing') && document.querySelector('.np-progress .time:last-child').textContent === '01:40'");
+    await js("document.querySelector('.player button[title=暂停]').click()");
+    await waitFor("!document.body.classList.contains('playing')");
+    const elapsed = "Number(document.querySelector('.np-progress .time').textContent.slice(-2))";
+    await waitFor("document.querySelectorAll('.ly-line').length >= 3");
+    await js("document.querySelector('.ly-line:nth-child(3)').click()");
+    await waitFor(`Math.abs(${elapsed} - 40) <= 1`);
+    await pressPlaybackKey('ArrowRight');
+    await waitFor(`Math.abs(${elapsed} - 45) <= 1`);
+    await pressPlaybackKey('ArrowLeft');
+    await waitFor(`Math.abs(${elapsed} - 40) <= 1`);
+    await pressPlaybackKey('Home', true);
+    await waitForTrack('快捷键第二首');
+    await pressPlaybackKey('ArrowLeft', true);
+    await waitForTrack('测试');
+    assert.equal(await pressPlaybackKey('ArrowRight', true, '#searchInput'), true, '搜索框中的 Ctrl+方向键应保留原生编辑行为');
+    assert.equal(await js("document.querySelector('.pl-title').textContent"), '测试');
+    checks.push('Ctrl+arrows and Ctrl+Home/End switch tracks, unmodified arrows seek, search retains editing shortcuts');
+
     await js(fs.readFileSync(process.env.GD_SMOKE_BUNDLE, 'utf8'));
     await wc.executeJavaScript("smokeHarness.setQueue([{id:'resume',name:'续播测试',source:'netease',artist:['测试']}],0,false);smokeHarness.S.lastTime=73;smokeHarness.player.position=73;smokeHarness.togglePlay()",true);
     await waitFor('!smokeHarness.audio.paused && smokeHarness.audio.currentTime>=73 && smokeHarness.audio.currentTime<76');

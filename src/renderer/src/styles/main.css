@@ -1541,13 +1541,8 @@ body:not(.playing) .trow.current .c-idx .num {
   z-index: 60;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--bg);
   -webkit-app-region: no-drag;
-  opacity: 0;
-  transition: opacity 0.32s var(--ease);
-}
-
-.np-page.in {
-  opacity: 1;
 }
 
 .np-bg {
@@ -1738,7 +1733,8 @@ body:not(.playing) .trow.current .c-idx .num {
   position: relative;
   width: 100%;
   max-height: 100%;
-  overflow: hidden;
+  overflow: hidden auto;
+  scrollbar-width: none;
   padding: 34vh 0;
   -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
   mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
@@ -2221,9 +2217,6 @@ body:not(.playing) .trow.current .c-idx .num {
   cursor: default;
 }
 
-.np-page.in {
-  opacity: 1;
-}
 /* 播放页底部控制条 */
 .np-controls {
   position: relative;

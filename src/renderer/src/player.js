@@ -314,9 +314,9 @@ export function next(auto = false) {
   loadAndPlay(true);
 }
 
-export function prev() {
+export function prev({ restartCurrent = true } = {}) {
   if (!S.queue.length) return;
-  if (audio.currentTime > 4) {
+  if (restartCurrent && audio.currentTime > 4) {
     audio.currentTime = 0;
     return;
   }

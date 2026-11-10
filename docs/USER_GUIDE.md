@@ -1,6 +1,6 @@
 # GD-Music 使用帮助
 
-适用于 Windows 桌面版 v1.0.8。项目地址：[kkkaqi/GD-Music](https://github.com/kkkaqi/GD-Music)。
+适用于 Windows 桌面版 v1.0.9。[项目地址](https://github.com/kkkaqi/GD-Music)
 
 ## 目录
 
@@ -21,12 +21,12 @@
 
 ### 使用 Windows 安装包
 
-前往 [v1.0.8 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.8)，在 Assets 中下载以下一种（Source code 是源码压缩包，不是安装包）：
+在发布页的 Assets 中选择安装版或免安装版。[v1.0.9 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.9)
 
 | 文件 | 使用方法 |
 | --- | --- |
-| `GD-Music-1.0.8-Windows-x64-Setup.exe` | 双击安装，完成后通过桌面或开始菜单的 GD-Music 启动。 |
-| `GD-Music-1.0.8-Windows-x64-Portable.exe` | 双击运行，无需安装。 |
+| `GD-Music-1.0.9-Windows-x64-Setup.exe` | 双击安装，完成后通过桌面或开始菜单的 GD-Music 启动。 |
+| `GD-Music-1.0.9-Windows-x64-Portable.exe` | 双击运行，无需安装。 |
 
 两个版本均自带运行环境，不需要单独安装 Node.js。实际文件名中的版本号可能更新；仓库源码和安装包是两种不同的交付内容。
 
@@ -208,6 +208,8 @@ Windows 默认用户数据目录是：
 | --- | --- |
 | Space | 播放 / 暂停。 |
 | ← / → | 后退 / 前进 5 秒。 |
+| Ctrl+← / Ctrl+Home | 上一首。 |
+| Ctrl+→ / Ctrl+End | 下一首。 |
 | ↑ / ↓ | 音量增加 / 减少 5%。 |
 | `/` | 聚焦搜索框。 |
 | Esc | 关闭菜单、弹窗、播放页或队列；歌词设置中也可关闭设置。 |

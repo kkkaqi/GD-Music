@@ -14,7 +14,7 @@ import ToastHost from './components/ToastHost.vue';
 import WindowFrame from './components/WindowFrame.vue';
 
 import { S, ui, loadState, goDiscover, refreshQuota, currentTrack, coverUrl, serialize } from './store';
-import { player, audio, togglePlay, nudge, setVolume } from './player';
+import { player, audio, togglePlay, next, prev, nudge, setVolume } from './player';
 import { menu, modal, closeMenu, resolveModal, focusSearchEl } from './ui';
 import { Api } from './api';
 import { initDesktopLyrics } from './desktop-lyrics-sync';
@@ -59,7 +59,14 @@ function onKey(e) {
   }
   if (typing) return;
 
-  if (e.code === 'Space') {
+  const controlOnly = e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey;
+  if (controlOnly && (e.key === 'ArrowRight' || e.key === 'End')) {
+    e.preventDefault();
+    next();
+  } else if (controlOnly && (e.key === 'ArrowLeft' || e.key === 'Home')) {
+    e.preventDefault();
+    prev({ restartCurrent: false });
+  } else if (e.code === 'Space') {
     e.preventDefault();
     togglePlay();
   } else if (e.key === 'ArrowRight') {
