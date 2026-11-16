@@ -1,0 +1,13 @@
+<resources>
+    <color name="page_background">#EFF3F6</color>
+    <color name="panel_background">#FFFFFF</color>
+    <color name="control_background">#E2E9EE</color>
+    <color name="primary_text">#14191B</color>
+    <color name="secondary_text">#546169</color>
+    <color name="disabled_content">#85919A</color>
+    <color name="action_green">#00E484</color>
+    <color name="green_ink">#007747</color>
+    <color name="featured_background">#CFF5E5</color>
+    <color name="featured_ink">#153C30</color>
+    <color name="touch_ripple">#180E2820</color>
+</resources>
