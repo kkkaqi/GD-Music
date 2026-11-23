@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>听歌识曲 · GD Music</title>
+  </head>
+  <body>
+    <header>
+      <div class="heading"><h1>听歌识曲</h1><button id="reload" type="button">重新加载</button></div>
+      <div class="sources" role="group" aria-label="声音来源">
+        <button type="button" data-mode="microphone" aria-pressed="true">麦克风</button>
+        <button type="button" data-mode="computer" aria-pressed="false">电脑声音</button>
+      </div>
+      <p id="status" role="status">正在加载免费识曲页面…</p>
+      <p class="hint">AHA Music 免费网页识曲 · 免登录 · 每日最多 200 次，额度以服务方为准</p>
+    </header>
+    <footer>
+      <form id="search">
+        <input id="query" type="text" maxlength="240" aria-label="识别出的歌名或歌手" placeholder="填入识别出的歌名或歌手" />
+        <button class="primary" type="submit">搜索歌曲</button>
+      </form>
+      <p class="hint">也可选中网页中的歌名，右键选择「在 GD Music 中搜索」。</p>
+    </footer>
+    <script type="module" src="/src/recognition.js"></script>
+  </body>
+</html>

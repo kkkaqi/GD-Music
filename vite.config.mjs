@@ -20,6 +20,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./src/renderer/index.html', import.meta.url)),
         lyrics: fileURLToPath(new URL('./src/renderer/desktop-lyrics.html', import.meta.url)),
+        recognition: fileURLToPath(new URL('./src/renderer/recognition.html', import.meta.url)),
       },
     },
     outDir: fileURLToPath(new URL('./src/renderer/dist', import.meta.url)),

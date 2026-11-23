@@ -548,7 +548,7 @@ app.whenReady().then(async () => {
     checks.push('streaming uses current website referer');
     await js('smokeHarness.clearQueue()');
     const beforeAudioDownload = chromiumRequests;
-    await js("window.bridge.state.save({favorites:[{id:'offline',source:'netease',name:'离线测试'}],quality:'320'})");
+    await js("smokeHarness.S.favorites=[{id:'offline',source:'netease',name:'离线测试'}];smokeHarness.S.quality='320';smokeHarness.persist()");
     await waitFor("window.bridge.audio.status().then(r=>r.data.ready===1)");
     assert.ok(chromiumRequests > beforeAudioDownload, '音频下载必须使用 Chromium 通道');
     const requestCountBeforeExport = playbackReferers.length;

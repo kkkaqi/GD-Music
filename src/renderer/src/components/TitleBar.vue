@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import Icon from './Icon.vue';
 import {
   S,
@@ -14,14 +14,19 @@ import {
   toggleAlbum,
   goSearchView,
 } from '../store';
-import { showModal, focusSearchEl } from '../ui';
+import { showModal, focusSearchEl, toast } from '../ui';
 import { Api } from '../api';
 
 const q = ref(ui.search.q || '');
 const maximized = ref(false);
 const win = window.bridge.win;
+let stopRecognition;
 
 onMounted(async () => {
+  stopRecognition = window.bridge.recognition.onResult(query => {
+    q.value = query;
+    runSearch(query);
+  });
   try {
     maximized.value = await win.isMaximized();
   } catch {
@@ -31,6 +36,15 @@ onMounted(async () => {
     maximized.value = v;
   });
 });
+
+onBeforeUnmount(() => stopRecognition?.());
+
+async function recognize() {
+  try {
+    const result = await window.bridge.recognition.open();
+    if (!result?.ok) throw Error(result?.error || '识曲窗口打开失败');
+  } catch (error) { toast(error.message, 'err'); }
+}
 
 function minimize() {
   win.minimize();
@@ -128,6 +142,10 @@ Chromium：${info ? info.chrome : '—'}
     </div>
 
     <div class="tb-right">
+      <button class="recognize-btn" title="听歌识曲" @click="recognize">
+        <Icon name="microphone" />
+        <span>听歌识曲</span>
+      </button>
       <button class="icon-btn sm" title="关于" @click="showAbout">
         <Icon name="info" />
       </button>

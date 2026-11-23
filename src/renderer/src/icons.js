@@ -7,6 +7,7 @@ const solid = (inner) =>
   `<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="none" aria-hidden="true">${inner}</svg>`;
 
 export const ICONS = {
+  microphone: stroke('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0014 0v-2M12 19v3M8 22h8"/>'),
   settings: stroke('<path d="M9 3h6l6 6v6l-6 6H9l-6-6V9z"/><circle cx="12" cy="12" r="3.5"/>'),
   lock: stroke('<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3M12 14v3"/>'),
   unlock: stroke('<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M10 10V6a4 4 0 018 0v2M12 14v3"/>'),

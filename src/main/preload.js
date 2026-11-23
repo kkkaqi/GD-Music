@@ -7,6 +7,14 @@ const { contextBridge, ipcRenderer } = require('electron');
 const invoke = (channel, payload) => ipcRenderer.invoke(channel, payload);
 
 contextBridge.exposeInMainWorld('bridge', {
+  recognition: {
+    open: () => invoke('recognition:open'),
+    onResult: callback => {
+      const handler = (_event, query) => callback(query);
+      ipcRenderer.on('recognition:result', handler);
+      return () => ipcRenderer.removeListener('recognition:result', handler);
+    },
+  },
   lyrics: {
     toggle: () => invoke('lyrics:toggle'),
     status: () => invoke('lyrics:status'),

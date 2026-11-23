@@ -5,20 +5,22 @@
 
 > **仅供学习交流，请勿商用。** 音乐版权归各平台与原作者所有。收藏的音频会下载到当前用户的本地目录。
 
-**使用帮助：[安装、歌单导入、下载、歌词、托盘与常见问题](docs/USER_GUIDE.md)** · 当前版本：**v1.0.9** · [审查与修复记录](docs/reviews/2026-10-23-v1.0.7-code-review.md)
+**使用帮助：[安装、歌单导入、下载、歌词、托盘与常见问题](docs/USER_GUIDE.md)** · 当前版本：**v1.0.11** · [审查与修复记录](docs/reviews/2026-10-23-v1.0.7-code-review.md)
 
 ## 下载安装
 
-前往 [v1.0.9 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.9)，在 Assets 中选择：
+前往 [v1.0.11 发布页](https://github.com/kkkaqi/GD-Music/releases/tag/v1.0.11)，在 Assets 中选择：
 
-- [Windows x64 安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.9/GD-Music-1.0.9-Windows-x64-Setup.exe)：双击安装，通过桌面或开始菜单启动。
-- [Windows x64 免安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.9/GD-Music-1.0.9-Windows-x64-Portable.exe)：下载后双击运行。
+- [Windows x64 安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.11/GD-Music-1.0.11-Windows-x64-Setup.exe)：双击安装，通过桌面或开始菜单启动。
+- [Windows x64 免安装版](https://github.com/kkkaqi/GD-Music/releases/download/v1.0.11/GD-Music-1.0.11-Windows-x64-Portable.exe)：下载后双击运行。
 
 两个版本均自带运行环境，无需安装 Node.js。发布页附有 `SHA256SUMS.txt`，用于核对下载文件。GitHub 自动生成的 Source code 压缩包是源码，不是安装包。
 
 ![首页](preview.png)
 
 ## 功能
+
+- **免费听歌识曲**：标题栏「听歌识曲」打开 AHA Music 免费网页，可选择麦克风或 Windows 电脑声音。点网页录音按钮开始识别，结果出现后会自动填入底部搜索框，点「搜索歌曲」返回播放器。也可选中歌名右键搜索。免登录，免费网页有广告和每日额度，当前为最多 200 次，以服务方规则为准。关闭识曲窗口或切换声音来源会停止当前页面收音。
 
 - **搜索**：按歌曲 / 歌手 / 专辑搜索，支持分页加载与「专辑模式」（`types=search_album`）
 - **音源与官网对齐**：网易云、QQ 音乐、酷我、TIDAL、Qobuz、JOOX、哔哩哔哩、Apple Music、YouTube Music、Embeat 共 10 个源，搜索、音频、封面、歌词统一沿用官网请求流程，不再按公开 API 的开放列表标记「未开放」。搜索按 20 条分页，JOOX 与官网一样不提供下一页；B站与 Embeat 不支持专辑模式。Embeat 仅在线播放，可收藏歌曲信息，跳过音频自动下载并在收藏页提示。

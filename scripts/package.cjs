@@ -21,7 +21,7 @@ child.on('error', err => { console.error(err.message); process.exit(1); });
 child.on('exit', code => {
   if (code !== 0) process.exit(code ?? 1);
   const release = path.join(root, 'release');
-  const desktopRelease = path.join(os.homedir(), 'Desktop', 'GD-Music-Release');
+  const desktopRelease = path.join(os.homedir(), 'Desktop', 'home', 'GD-Music-Release');
   fs.mkdirSync(release, { recursive: true });
   fs.mkdirSync(desktopRelease, { recursive: true });
   for (const name of fs.readdirSync(output)) {

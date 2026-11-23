@@ -15,6 +15,7 @@ const {
   screen,
   Tray,
   Menu,
+  desktopCapturer,
 } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -31,6 +32,8 @@ const { gestureBounds, EDGES } = require('./window-geometry');
 let desktopLyrics;
 const { SystemTray } = require('./system-tray');
 let systemTray;
+const { MusicRecognition } = require('./music-recognition');
+let musicRecognition;
 let quitPending = false;
 let quitReady = false;
 let quitTimer;
@@ -45,7 +48,7 @@ const shotArg = process.argv.find((a) => a === '--shot' || a.startsWith('--shot=
 const SHOT_TARGET = shotArg ? (shotArg.includes('=') ? shotArg.split('=')[1] : 'home') : null;
 
 app.setName(APP_NAME);
-nativeTheme.themeSource = 'dark';
+nativeTheme.themeSource = 'light';
 
 // 用自定义 scheme 承载打包后的页面：file:// 下 ES module 会被 CORS 拦截
 protocol.registerSchemesAsPrivileged([
@@ -96,7 +99,7 @@ function createWindow() {
     frame: false,
     resizable: true,
     thickFrame: true,
-    backgroundColor: '#07090d',
+    backgroundColor: '#f5f8f7',
     title: APP_NAME,
     icon: path.join(__dirname, '..', '..', 'assets', 'icon.png'),
     webPreferences: {
@@ -141,6 +144,7 @@ function createWindow() {
   win.on('closed', () => {
     windowGesture = null;
     desktopLyrics?.destroy();
+    musicRecognition?.destroy();
     win = null;
   });
 }
@@ -272,6 +276,26 @@ function wrap(fn) {
 }
 
 ipcMain.handle('api:search', wrap(api.search));
+ipcMain.handle('recognition:open', (event) => {
+  if (!mainSender(event)) return { ok: false, error: '无法打开识曲窗口' };
+  musicRecognition.open(win);
+  return { ok: true };
+});
+for (const [channel, action] of [
+  ['recognition:mode', value => musicRecognition.setMode(value)],
+  ['recognition:reload', () => musicRecognition.load()],
+  ['recognition:search', value => musicRecognition.search(value)],
+]) {
+  ipcMain.handle(channel, async (event, value) => {
+    if (!musicRecognition?.owns(event)) return { ok: false, error: '识曲窗口已关闭' };
+    try {
+      action(value);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
+  });
+}
 ipcMain.handle('api:url', wrap((params) => audioCache.resolve(params)));
 ipcMain.handle('audio:status', wrap(async () => audioCache.status()));
 ipcMain.handle('audio:retry', wrap(async () => { audioCache.retry(); return audioCache.status(); }));
@@ -458,6 +482,15 @@ if (!gotLock) {
     audioCache.syncFavorites(saved.favorites, saved.quality);
 
     serveRenderer();
+    musicRecognition = new MusicRecognition({
+      BrowserWindow, WebContentsView, Menu, desktopCapturer,
+      preload: path.join(__dirname, 'recognition-preload.js'),
+      rendererURL: DEV_MODE ? DEV_URL + '/recognition.html' : 'app://bundle/recognition.html',
+      onSearch: query => {
+        showMainWindow();
+        win?.webContents.send('recognition:result', query);
+      },
+    });
     createWindow();
     desktopLyrics = new DesktopLyrics({ BrowserWindow, screen,
       file: path.join(userData, 'desktop-lyrics.json'),
@@ -509,6 +542,7 @@ if (!gotLock) {
     clearTimeout(quitTimer);
     systemTray?.destroy();
     websiteApi?.destroy();
+    musicRecognition?.destroy();
     desktopLyrics?.destroy();
     store.close();
     globalShortcut.unregisterAll();
